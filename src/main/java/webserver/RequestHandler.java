@@ -28,6 +28,7 @@ public class RequestHandler extends Thread {
 			byte[] body = "Hello JAVA".getBytes();
 			response200Header(dos, body.length);
 			responseBody(dos, body);
+			log.info("socket read end");
 		} catch (IOException e) {
 			log.error(e.getMessage());
 		}
