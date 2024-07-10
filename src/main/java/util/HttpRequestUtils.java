@@ -6,8 +6,21 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import webserver.RequestHandler;
 
 public class HttpRequestUtils {
+
+	private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
+
+	public static String getUrl(String firstLine) {
+
+		String[] tokens = firstLine.split(" ");
+		log.debug("requested Url : {}", tokens[1]);
+		return tokens[1];
+	}
+
 	/**
 	 * @param queryString은 URL에서 ? 이후에 전달되는 name=value 임
 	 * @return
