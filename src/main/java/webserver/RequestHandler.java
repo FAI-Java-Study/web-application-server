@@ -10,63 +10,104 @@ import java.io.OutputStream;
 import java.net.Socket;
 
 import java.nio.file.Files;
+import java.util.HashMap;
+import java.util.Map;
+import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.HttpRequestUtils;
+import util.IOUtils;
 
 public class RequestHandler extends Thread {
-	private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
-	
-	private Socket connection;
 
-	public RequestHandler(Socket connectionSocket) {
-		this.connection = connectionSocket;
-	}
+    private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
 
-	public void run() {
-		log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(), connection.getPort());
-		
-		try (InputStream in = connection.getInputStream();
-			OutputStream out = connection.getOutputStream()) {
+    private Socket connection;
 
-			BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
+    public RequestHandler(Socket connectionSocket) {
+        this.connection = connectionSocket;
+    }
 
-			String line = br.readLine();
+    public void run() {
+        log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(),
+            connection.getPort());
 
+        try (InputStream in = connection.getInputStream();
+            OutputStream out = connection.getOutputStream()) {
 
-			if (line == null) {
-				return;
-			}
+            BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
 
-			String path = HttpRequestUtils.getUrl(line);
+            String line = br.readLine();
 
-			DataOutputStream dos = new DataOutputStream(out);
-			byte[] body = Files.readAllBytes(new File("./webapp" + path).toPath());
-			response200Header(dos, body.length);
-			responseBody(dos, body);
-		} catch (IOException e) {
-			log.error(e.getMessage());
-		}
-	}
+            if (line == null) {
+                return;
+            }
+            String url = HttpRequestUtils.getUrl(line);
+            Map<String, String> headers = new HashMap<>();
+            while (!line.equals("")) {
+                log.debug("header : {}", line);
+                line = br.readLine();
+                String[] headerToken = line.split(": "); // 뒤에 공백 있는게 rfc 표준
+                if (headerToken.length == 2) {
+                    headers.put(headerToken[0], headerToken[1]);
+                }
+            }
 
-	private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
-		try {
-			dos.writeBytes("HTTP/1.1 200 OK \r\n");
-			dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
-			dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
-			dos.writeBytes("\r\n");
-		} catch (IOException e) {
-			log.error(e.getMessage());
-		}
-	}
-	
-	private void responseBody(DataOutputStream dos, byte[] body) {
-		try {
-			dos.write(body, 0, body.length);
-			dos.writeBytes("\r\n");
-			dos.flush();
-		} catch (IOException e) {
-			log.error(e.getMessage());
-		}
-	}
+            if (url.startsWith("/create")) {
+                String requestBody = IOUtils.readData(br,
+                    Integer.parseInt(headers.get("Content-Length")));
+                log.debug("requestBody : {}", requestBody);
+                Map<String, String> params = HttpRequestUtils.parseQueryString(requestBody);
+                User user = new User(params.get("userId"), params.get("password"),
+                    params.get("name"), params.get("email"));
+                log.debug("User : {}", user);
+
+                url = "/index.html";
+
+                DataOutputStream dos = new DataOutputStream(out);
+                byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
+                response302Header(dos);
+                responseBody(dos, body);
+            } else {
+
+                DataOutputStream dos = new DataOutputStream(out);
+                byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
+                response200Header(dos, body.length);
+                responseBody(dos, body);
+            }
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
+        try {
+            dos.writeBytes("HTTP/1.1 200 OK \r\n");
+            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void response302Header(DataOutputStream dos) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 FOUND \r\n");
+            dos.writeBytes("Location: /index.html\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void responseBody(DataOutputStream dos, byte[] body) {
+        try {
+            dos.write(body, 0, body.length);
+            dos.writeBytes("\r\n");
+            dos.flush();
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
 }
