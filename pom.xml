@@ -39,10 +39,14 @@
 			<version>1.2.10</version> <!-- 최신 버전으로 업데이트 -->
 		</dependency>
 
-		<!-- SLF4J API -->
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
+			<version>1.7.32</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
 			<version>1.7.32</version>
 		</dependency>
 
