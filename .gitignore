@@ -3,3 +3,30 @@
 /target/
 /.classpath
 /.project
+
+
+gradle/
+!gradle/wrapper/gradle-wrapper.properties
+
+# Gradle
+.gradle/
+build/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Gradle Wrapper
+gradle/wrapper/gradle-wrapper.jar
+
+# Build output
+out/
+
+# Logs
+*.log
+
+# Mac OS
+.DS_Store
+
+# Windows
+Thumbs.db
