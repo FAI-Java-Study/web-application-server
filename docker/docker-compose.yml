@@ -1,0 +1,12 @@
+services:
+  web-server:
+    container_name: web-server
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../.build:/workspace
+    ports:
+      - "8888:8080"
+    stdin_open: true
+    tty: true
