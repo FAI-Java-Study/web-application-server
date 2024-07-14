@@ -2,6 +2,7 @@ package util;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Strings;
@@ -16,12 +17,12 @@ public class HttpRequestUtils {
 		if (Strings.isNullOrEmpty(queryString)) {
 			return Maps.newHashMap();
 		}
-		
+
 		String[] tokens = queryString.split("&");
 		return Arrays.stream(tokens)
 					.map(t -> getKeyValue(t, "="))
-					.filter(p -> p != null)
-					.collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()));
+					.filter(Objects::nonNull)
+					.collect(Collectors.toMap(Pair::getKey, Pair::getValue));
 	}
 	
 	static Pair getKeyValue(String keyValue, String regex) {
