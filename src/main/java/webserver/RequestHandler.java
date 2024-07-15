@@ -1,6 +1,7 @@
 package webserver;
 
 import static util.HttpRequestUtils.Pair.*;
+import static util.IOUtils.*;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -9,6 +10,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.Objects;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +18,7 @@ import org.slf4j.LoggerFactory;
 public class RequestHandler extends Thread {
 	private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
 	private static final String INDEX_HTML = "/index.html";
-	
+
 	private final Socket connection;
 
 	public RequestHandler(Socket connectionSocket) {
@@ -24,33 +26,43 @@ public class RequestHandler extends Thread {
 	}
 
 	public void run() {
-		log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(), connection.getPort());
+		log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(),
+			connection.getPort());
 
 		try (InputStream in = connection.getInputStream();
 			 OutputStream out = connection.getOutputStream();
-			 BufferedReader reader = new BufferedReader(new InputStreamReader(in));) {
+			 BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+			 DataOutputStream dos = new DataOutputStream(out)) {
 
 			String line = reader.readLine();
+			String requestedUrl = "";
 
-			while (!"".equals(line)) {
-				if (line == null) {
-					return;
-				}
-				String requestedUrl = getRequestedUrl(line);
+			while (line != null && !"".equals(line)) {
+				requestedUrl = getRequestedUrl(line);
+
 				if (INDEX_HTML.equals(requestedUrl)) {
-					log.info("index html request url: {}", requestedUrl);
+					break;
 				}
-				log.info("line: {}", line);
 				line = reader.readLine();
 			}
 
-			DataOutputStream dos = new DataOutputStream(out);
-			byte[] body = "Hello World".getBytes();
+			byte[] body = generateResponseBody(requestedUrl);
 			response200Header(dos, body.length);
 			responseBody(dos, body);
 		} catch (IOException e) {
 			log.error(e.getMessage());
 		}
+	}
+
+	private byte[] generateResponseBody(String requestedUrl) {
+		if (INDEX_HTML.equals(requestedUrl)) {
+			try {
+				return readFileAsByteArray(requestedUrl);
+			} catch (IOException e) {
+				log.error("I/O 에러 발생!!!: ", e);
+			}
+		}
+		return "Hello World".getBytes();
 	}
 
 	private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
@@ -63,7 +75,7 @@ public class RequestHandler extends Thread {
 			log.error(e.getMessage());
 		}
 	}
-	
+
 	private void responseBody(DataOutputStream dos, byte[] body) {
 		try {
 			dos.write(body, 0, body.length);
