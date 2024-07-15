@@ -2,6 +2,7 @@ package util;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
+import static util.HttpRequestUtils.Pair.*;
 
 import java.util.Map;
 
@@ -60,5 +61,20 @@ public class HttpRequestUtilsTest {
 		String header = "Content-Length: 59";
 		Pair pair = HttpRequestUtils.parseHeader(header);
 		assertThat(pair, is(new Pair("Content-Length", "59")));
+	}
+
+	@Test
+	public void testGetRequestedUrl() {
+		// 정상적인 HTTP 요청 라인
+		assertEquals("/index.html", getRequestedUrl("GET /index.html HTTP/1.1"));
+		assertEquals("/", getRequestedUrl("POST / HTTP/1.1"));
+		assertEquals("/api/users?id=123", getRequestedUrl("GET /api/users?id=123 HTTP/1.1"));
+
+		// 비정상적인 입력
+		assertEquals("", getRequestedUrl(""));
+		assertEquals("", getRequestedUrl(null));
+		assertEquals("", getRequestedUrl("   "));
+		assertEquals("", getRequestedUrl("GET"));
+		assertEquals("", getRequestedUrl("GET "));
 	}
 }
