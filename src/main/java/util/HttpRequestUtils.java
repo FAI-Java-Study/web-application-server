@@ -94,5 +94,33 @@ public class HttpRequestUtils {
 		public String toString() {
 			return "Pair [key=" + key + ", value=" + value + "]";
 		}
+
+		/**
+		 * 파라미터 line에서 요청 URL을 추출한다.
+		 * @param line
+		 * @return
+		 */
+		public static String getRequestedUrl(String line) {
+			if (isBlank(line)) {
+				return "";
+			}
+			String[] tokens = line.split(" ");
+			if (tokens.length < 2) {
+				return "";
+			}
+			return tokens[1];
+		}
+
+		public static boolean isBlank(String str) {
+			if (str == null || str.isEmpty()) {
+				return true;
+			}
+			for (int i = 0; i < str.length(); i++) {
+				if (!Character.isWhitespace(str.charAt(i))) {
+					return false;
+				}
+			}
+			return true;
+		}
 	}
 }

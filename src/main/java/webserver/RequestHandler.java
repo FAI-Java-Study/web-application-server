@@ -1,5 +1,7 @@
 package webserver;
 
+import static util.HttpRequestUtils.Pair.*;
+
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -13,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 public class RequestHandler extends Thread {
 	private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
+	private static final String INDEX_HTML = "/index.html";
 	
 	private final Socket connection;
 
@@ -32,6 +35,10 @@ public class RequestHandler extends Thread {
 			while (!"".equals(line)) {
 				if (line == null) {
 					return;
+				}
+				String requestedUrl = getRequestedUrl(line);
+				if (INDEX_HTML.equals(requestedUrl)) {
+					log.info("index html request url: {}", requestedUrl);
 				}
 				log.info("line: {}", line);
 				line = reader.readLine();
