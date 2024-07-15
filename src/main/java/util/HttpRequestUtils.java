@@ -1,5 +1,7 @@
 package util;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
@@ -22,9 +24,20 @@ public class HttpRequestUtils {
 		return Arrays.stream(tokens)
 					.map(t -> getKeyValue(t, "="))
 					.filter(Objects::nonNull)
-					.collect(Collectors.toMap(Pair::getKey, Pair::getValue));
+					.collect(Collectors.toMap(
+						p -> decodeValue(p.getKey()),
+						p -> decodeValue(p.getValue())
+					));
 	}
-	
+
+	private static String decodeValue(String value) {
+		try {
+			return URLDecoder.decode(value, StandardCharsets.UTF_8.name());
+		} catch (Exception e) {
+			return value;
+		}
+	}
+
 	static Pair getKeyValue(String keyValue, String regex) {
 		if (Strings.isNullOrEmpty(keyValue)) {
 			return null;
