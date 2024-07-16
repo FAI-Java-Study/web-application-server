@@ -2,7 +2,9 @@ package util;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -28,6 +30,14 @@ public class HttpRequestUtils {
 						p -> decodeValue(p.getKey()),
 						p -> decodeValue(p.getValue())
 					));
+	}
+
+	public static List<String> parseCookies(String cookies) {
+		if (isBlank(cookies)) {
+			return new ArrayList<>();
+		}
+		String[] tokens = cookies.split("; ");
+		return Arrays.asList(tokens);
 	}
 
 	private static String decodeValue(String value) {
@@ -123,17 +133,17 @@ public class HttpRequestUtils {
 			}
 			return tokens[1];
 		}
+	}
 
-		public static boolean isBlank(String str) {
-			if (str == null || str.isEmpty()) {
-				return true;
-			}
-			for (int i = 0; i < str.length(); i++) {
-				if (!Character.isWhitespace(str.charAt(i))) {
-					return false;
-				}
-			}
+	public static boolean isBlank(String str) {
+		if (str == null || str.isEmpty()) {
 			return true;
 		}
+		for (int i = 0; i < str.length(); i++) {
+			if (!Character.isWhitespace(str.charAt(i))) {
+				return false;
+			}
+		}
+		return true;
 	}
 }

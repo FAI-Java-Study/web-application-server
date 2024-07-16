@@ -24,6 +24,10 @@ public final class DataBase {
 		return users.add(user);
 	}
 
+	public static List<User> findAll() {
+		return new ArrayList<>(users);
+	}
+
 	public static Optional<User> findUserByIdAndPassword(String userId, String password) {
 		return users.stream()
 			.filter(user -> Objects.equals(user.getUserId(), userId)
