@@ -30,7 +30,9 @@ public class RequestHandler extends Thread {
 		Arrays.asList("/index.html", "/form.html", "/login.html"));
 	private static final String CREATE_ROUTE = "/create";
 	private static final String LOGIN_ROUTE = "/login?";
+	private static final String USER_LIST_ROUTE = "/user/list";
 	private static final String CONTENT_LENGTH = "Content-Length: ";
+	private static final String COOKIE = "Cookie: ";
 
 	private final Socket connection;
 
@@ -60,6 +62,11 @@ public class RequestHandler extends Thread {
 
 				if (Objects.requireNonNull(requestedUrl).startsWith(LOGIN_ROUTE)) {
 					loginUser(requestedUrl, dos);
+					return;
+				}
+
+				if(Objects.requireNonNull(requestedUrl).startsWith(USER_LIST_ROUTE)) {
+					getUsers(reader, dos);
 					return;
 				}
 
@@ -142,6 +149,32 @@ public class RequestHandler extends Thread {
 		}
 	}
 
+	private void getUsers(BufferedReader reader, DataOutputStream dos) throws IOException {
+		// header 읽기
+		String line = reader.readLine();
+		String cookie = "";
+
+		while (line != null && !line.isEmpty()) {
+			if (line.startsWith(COOKIE)) {
+				cookie = line.substring(COOKIE.length());
+				break;
+			}
+			line = reader.readLine();
+		}
+
+		List<String> cookies = parseCookies(cookie);
+
+		boolean isLogin = cookies.stream()
+			.anyMatch("logined=true"::equals);
+
+		if (isLogin) {
+			responseSuccessHeader(dos);
+			log.info("Users: {}", DataBase.findAll());
+		} else {
+			responseFailureHeader(dos);
+		}
+	}
+
 	private byte[] generateResponseBody(String requestedUrl) {
 		if (WEB_APP_ROUTE.contains(requestedUrl)) {
 			try {
@@ -166,14 +199,14 @@ public class RequestHandler extends Thread {
 	}
 
 	/**
-	 * fixme: login-failed html이 없어서 우선은 index.html로 리다이렉트
+	 * fixme: login-failed html이 없어서 우선은 login.html로 리다이렉트
 	 * @param dos
 	 */
 	private void responseFailureHeader(DataOutputStream dos) {
 		try {
 			dos.writeBytes("HTTP/1.1 303 See Other \r\n");
 			dos.writeBytes("Set-Cookie: logined=false\r\n");
-			dos.writeBytes("Location: /index.html\r\n");
+			dos.writeBytes("Location: /login.html\r\n");
 			dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
 			dos.writeBytes("\r\n");
 		} catch (IOException e) {
