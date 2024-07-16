@@ -28,6 +28,7 @@ public class RequestHandler extends Thread {
 	private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
 	private static final List<String> WEB_APP_ROUTE = Collections.unmodifiableList(
 		Arrays.asList("/index.html", "/form.html", "/login.html"));
+	private static final String CSS_ROUTE = ".css";
 	private static final String CREATE_ROUTE = "/create";
 	private static final String LOGIN_ROUTE = "/login?";
 	private static final String USER_LIST_ROUTE = "/user/list";
@@ -65,13 +66,20 @@ public class RequestHandler extends Thread {
 					return;
 				}
 
-				if(Objects.requireNonNull(requestedUrl).startsWith(USER_LIST_ROUTE)) {
+				if (Objects.requireNonNull(requestedUrl).startsWith(USER_LIST_ROUTE)) {
 					getUsers(reader, dos);
 					return;
 				}
 
 				if (WEB_APP_ROUTE.contains(requestedUrl)) {
 					break;
+				}
+
+				if (Objects.requireNonNull(requestedUrl).endsWith(CSS_ROUTE)) {
+					byte[] cssContent = readFileAsByteArray(requestedUrl);
+					responseCssHeader(dos);
+					responseBody(dos, cssContent);
+					return;
 				}
 				line = reader.readLine();
 			}
@@ -126,7 +134,7 @@ public class RequestHandler extends Thread {
 			if (isSuccess) {
 				response303Header(dos);
 				log.info("User: {}", user);
-			} else{
+			} else {
 				responseFailureHeader(dos);
 			}
 		}
@@ -230,6 +238,16 @@ public class RequestHandler extends Thread {
 			dos.writeBytes("HTTP/1.1 200 OK \r\n");
 			dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
 			dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+			dos.writeBytes("\r\n");
+		} catch (IOException e) {
+			log.error(e.getMessage());
+		}
+	}
+
+	private void responseCssHeader(DataOutputStream dos) {
+		try {
+			dos.writeBytes("HTTP/1.1 200 OK \r\n");
+			dos.writeBytes("Content-Type: text/css\r\n");
 			dos.writeBytes("\r\n");
 		} catch (IOException e) {
 			log.error(e.getMessage());
