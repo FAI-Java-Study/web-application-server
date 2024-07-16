@@ -53,6 +53,7 @@ public class RequestHandler extends Thread {
 				if (Objects.requireNonNull(requestedUrl).startsWith(CREATE_ROUTE)) {
 					User user = createUser(reader);
 					log.info("User: {}", user);
+					response303Header(dos);
 					break;
 				}
 
@@ -115,6 +116,17 @@ public class RequestHandler extends Thread {
 			}
 		}
 		return "Hello World".getBytes();
+	}
+
+	private void response303Header(DataOutputStream dos) {
+		try {
+			dos.writeBytes("HTTP/1.1 303 See Other \r\n");
+			dos.writeBytes("Location: /index.html\r\n");
+			dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+			dos.writeBytes("\r\n");
+		} catch (IOException e) {
+			log.error(e.getMessage());
+		}
 	}
 
 	private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
