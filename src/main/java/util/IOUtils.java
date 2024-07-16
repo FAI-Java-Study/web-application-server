@@ -3,6 +3,8 @@ package util;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
 public class IOUtils {
@@ -18,7 +20,7 @@ public class IOUtils {
 	public static String readData(BufferedReader bufferedReader, int contentLength) throws IOException {
 		char[] body = new char[contentLength];
 		bufferedReader.read(body, 0, contentLength);
-		return String.copyValueOf(body);
+		return URLDecoder.decode(String.copyValueOf(body), StandardCharsets.UTF_8.name());
 	}
 
 	public static byte[] readFileAsByteArray(String url) throws IOException {
