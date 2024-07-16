@@ -17,6 +17,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +29,7 @@ public class RequestHandler extends Thread {
 	private static final List<String> WEB_APP_ROUTE = Collections.unmodifiableList(
 		Arrays.asList("/index.html", "/form.html", "/login.html"));
 	private static final String CREATE_ROUTE = "/create";
+	private static final String LOGIN_ROUTE = "/login?";
 	private static final String CONTENT_LENGTH = "Content-Length: ";
 
 	private final Socket connection;
@@ -50,11 +52,15 @@ public class RequestHandler extends Thread {
 
 			while (line != null && !line.isEmpty()) {
 				requestedUrl = getRequestedUrl(line);
+
 				if (Objects.requireNonNull(requestedUrl).startsWith(CREATE_ROUTE)) {
-					User user = createUser(reader);
-					log.info("User: {}", user);
-					response303Header(dos);
-					break;
+					createUser(reader, dos);
+					return;
+				}
+
+				if (Objects.requireNonNull(requestedUrl).startsWith(LOGIN_ROUTE)) {
+					loginUser(requestedUrl, dos);
+					return;
 				}
 
 				if (WEB_APP_ROUTE.contains(requestedUrl)) {
@@ -79,7 +85,7 @@ public class RequestHandler extends Thread {
 	 * @param reader
 	 * @return
 	 */
-	private User createUser(BufferedReader reader) throws IOException {
+	private void createUser(BufferedReader reader, DataOutputStream dos) throws IOException, IllegalArgumentException {
 		// header 읽기
 		String line = reader.readLine();
 		int contentLength = -1;
@@ -102,9 +108,38 @@ public class RequestHandler extends Thread {
 			String name = queryStringMap.get("name");
 			String email = queryStringMap.get("email");
 
-			return new User(userId, password, name, email);
+			if (isBlank(userId) || isBlank(password)) {
+				log.error("아이디 비번은 필수값입니다.");
+				responseFailureHeader(dos);
+				return;
+			}
+
+			User user = new User(userId, password, name, email);
+			boolean isSuccess = DataBase.addUser(user);
+			if (isSuccess) {
+				response303Header(dos);
+				log.info("User: {}", user);
+			} else{
+				responseFailureHeader(dos);
+			}
 		}
-		return null;
+	}
+
+	private void loginUser(String requestedUrl, DataOutputStream dos) throws IOException {
+		int index = requestedUrl.indexOf("?");
+		String queryString = requestedUrl.substring(index + 1);
+		Map<String, String> queryStringMap = parseQueryString(queryString);
+
+		String userId = queryStringMap.get("userId");
+		String password = queryStringMap.get("password");
+
+		Optional<User> user = DataBase.findUserByIdAndPassword(userId, password);
+
+		if (user.isPresent()) {
+			responseSuccessHeader(dos);
+		} else {
+			responseFailureHeader(dos);
+		}
 	}
 
 	private byte[] generateResponseBody(String requestedUrl) {
@@ -116,6 +151,34 @@ public class RequestHandler extends Thread {
 			}
 		}
 		return "Hello World".getBytes();
+	}
+
+	private void responseSuccessHeader(DataOutputStream dos) {
+		try {
+			dos.writeBytes("HTTP/1.1 303 See Other \r\n");
+			dos.writeBytes("Set-Cookie: logined=true\r\n");
+			dos.writeBytes("Location: /index.html\r\n");
+			dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+			dos.writeBytes("\r\n");
+		} catch (IOException e) {
+			log.error(e.getMessage());
+		}
+	}
+
+	/**
+	 * fixme: login-failed html이 없어서 우선은 index.html로 리다이렉트
+	 * @param dos
+	 */
+	private void responseFailureHeader(DataOutputStream dos) {
+		try {
+			dos.writeBytes("HTTP/1.1 303 See Other \r\n");
+			dos.writeBytes("Set-Cookie: logined=false\r\n");
+			dos.writeBytes("Location: /index.html\r\n");
+			dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+			dos.writeBytes("\r\n");
+		} catch (IOException e) {
+			log.error(e.getMessage());
+		}
 	}
 
 	private void response303Header(DataOutputStream dos) {
