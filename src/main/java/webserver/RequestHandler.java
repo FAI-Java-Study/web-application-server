@@ -48,10 +48,11 @@ public class RequestHandler extends Thread {
             byte[] body = "Hello World".getBytes();
 
             if ("/index.html".equals(requestPath)) {
+
                 body = Files.readAllBytes(new File("webapp" + requestPath).toPath());
             }
 
-            if (requestPath.startsWith("/user/create")) {
+            if (requestPath.startsWith("/user/create") && "GET".equals(tokens[0])) {
 
                 String splitParams = requestPath.split("\\?")[1];
 
@@ -60,7 +61,11 @@ public class RequestHandler extends Thread {
                 log.debug("User : {}", user);
             }
 
-            if (requestPath.startsWith("/create") && "POST".equals(tokens[0])) {
+            if ("/form.html".equals(requestPath)) {
+                body = Files.readAllBytes(new File("webapp" + requestPath).toPath());
+            }
+
+            if (requestPath.startsWith("/user/create") && "POST".equals(tokens[0])) {
                 int contentLength = 0;
                 while (!"".equals(line)) {
                     line = br.readLine();
@@ -74,6 +79,10 @@ public class RequestHandler extends Thread {
                 Map<String, String> params = HttpRequestUtils.parseQueryString(bodyStr);
 
                 User user = new User(params.get("userId"), params.get("password"), params.get("name"), params.get("email"));
+
+                log.debug("User : {}", user);
+
+                response302Header(dos, "/index.html");
             }
 
 
@@ -94,6 +103,16 @@ public class RequestHandler extends Thread {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage(), e);
+        }
+    }
+
+    private void response302Header(DataOutputStream dos, String location) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Redirect \r\n");
+            dos.writeBytes("Location: " + location + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage(), e);
