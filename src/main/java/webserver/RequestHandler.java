@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.util.Map;
@@ -109,9 +110,30 @@ public class RequestHandler extends Thread {
                 }
             }
 
+            if (requestPath.startsWith("/user/list") && "GET".equals(tokens[0]) && "true".equals(HttpRequestUtils.parseCookies(br.readLine()).get("logined"))) {
+                StringBuilder sb = new StringBuilder();
+                sb.append("<table border='1'>");
+                sb.append("<tr>");
+                sb.append("<th>userId</th>");
+                sb.append("<th>name</th>");
+                sb.append("<th>email</th>");
+                sb.append("</tr>");
+                for (User user : DataBase.findAll()) {
+                    sb.append("<tr>");
+                    sb.append("<td>" + user.getUserId() + "</td>");
+                    sb.append("<td>" + user.getName() + "</td>");
+                    sb.append("<td>" + user.getEmail() + "</td>");
+                    sb.append("</tr>");
+                }
+                sb.append("</table>");
+                body = sb.toString().getBytes();
+            }
 
+            if (requestPath.startsWith("/user/list") && "GET".equals(tokens[0]) && !"true".equals(HttpRequestUtils.parseCookies(br.readLine()).get("logined"))) {
+                response302Header(dos, "/login.html");
+            }
 
-            while ((line = br.readLine()) != null && !"".equals(line)) {
+        while ((line = br.readLine()) != null && !"".equals(line)) {
                 log.debug("header : {}", line);
             }
 
