@@ -48,10 +48,6 @@ public class RequestHandler extends Thread {
             String requestPath = tokens[1];
             byte[] body = "Hello World".getBytes();
 
-            if ("/index.html".equals(requestPath)) {
-
-                body = Files.readAllBytes(new File("webapp" + requestPath).toPath());
-            }
 
             if (requestPath.startsWith("/user/create") && "GET".equals(tokens[0])) {
 
@@ -62,8 +58,9 @@ public class RequestHandler extends Thread {
                 log.debug("User : {}", user);
             }
 
-            if ("/form.html".equals(requestPath)) {
+            if (requestPath.contains(".html")) {
                 body = Files.readAllBytes(new File("webapp" + requestPath).toPath());
+
             }
 
             if (requestPath.startsWith("/user/create") && "POST".equals(tokens[0])) {
@@ -107,6 +104,14 @@ public class RequestHandler extends Thread {
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage(), e);
+        }
+    }
+
+    private void setHeaderCookie(DataOutputStream dos, String cookie) {
+        try {
+            dos.writeBytes("Set-Cookie: " + cookie + "\r\n");
         } catch (IOException e) {
             log.error(e.getMessage(), e);
         }
