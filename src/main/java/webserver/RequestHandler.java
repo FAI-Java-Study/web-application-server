@@ -85,6 +85,30 @@ public class RequestHandler extends Thread {
                 response302Header(dos, "/index.html");
             }
 
+            if (requestPath.startsWith("/user/login") && "POST".equals(tokens[0])) {
+                int contentLength = 0;
+                while (!"".equals(line)) {
+                    line = br.readLine();
+                    if (line.contains("Content-Length")) {
+                        contentLength = Integer.parseInt(line.split(":")[1].trim());
+                    }
+                }
+                String bodyStr = IOUtils.readData(br, contentLength);
+                log.debug("Request Body : {}", bodyStr);
+
+                Map<String, String> params = HttpRequestUtils.parseQueryString(bodyStr);
+
+                User user = DataBase.findUserById(params.get("userId")).orElseThrow(() -> new Exception("User Not Found"));
+
+                if (user.getPassword().equals(params.get("password"))) {
+                    log.debug("Login Success");
+                    response302Header(dos, "/index.html");
+                    setHeaderCookie(dos, "logined=true");
+                } else {
+                    log.debug("Login Fail");
+                }
+            }
+
 
 
             while ((line = br.readLine()) != null && !"".equals(line)) {
@@ -93,7 +117,7 @@ public class RequestHandler extends Thread {
 
             response200Header(dos, body.length);
             responseBody(dos, body);
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
     }
