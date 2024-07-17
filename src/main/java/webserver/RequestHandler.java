@@ -8,100 +8,105 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
-
 import java.nio.file.Files;
 import java.util.Map;
 import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.HttpRequestUtils;
+import util.IOUtils;
 
 public class RequestHandler extends Thread {
-	private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
-	
-	private Socket connection;
 
-	public RequestHandler(Socket connectionSocket) {
-		this.connection = connectionSocket;
-	}
+    private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
 
-	public void run() {
-		log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(), connection.getPort());
-		
-		try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
-			// TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
-			DataOutputStream dos = new DataOutputStream(out);
+    private Socket connection;
 
-			BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
+    public RequestHandler(Socket connectionSocket) {
+        this.connection = connectionSocket;
+    }
 
-			String line = br.readLine();
+    public void run() {
+        log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(),
+            connection.getPort());
 
-			byte[] body = "Hello World".getBytes();
+        try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
+            DataOutputStream dos = new DataOutputStream(out);
+            BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
+
+            String line = br.readLine();
+            if (line == null) {
+                return;
+            }
+
+            String[] tokens = line.split(" ");
+            if (tokens.length < 2) {
+                return;
+            }
+
+            String requestPath = tokens[1];
+            byte[] body = "Hello World".getBytes();
+
+            if ("/index.html".equals(requestPath)) {
+                body = Files.readAllBytes(new File("webapp" + requestPath).toPath());
+            }
+
+            if (requestPath.startsWith("/user/create")) {
+
+                String splitParams = requestPath.split("\\?")[1];
+
+                Map<String, String> params = HttpRequestUtils.parseQueryString(splitParams);
+                User user = new User(params.get("userId"), params.get("password"), params.get("name"), params.get("email"));
+                log.debug("User : {}", user);
+            }
+
+            if (requestPath.startsWith("/create") && "POST".equals(tokens[0])) {
+                int contentLength = 0;
+                while (!"".equals(line)) {
+                    line = br.readLine();
+                    if (line.contains("Content-Length")) {
+                        contentLength = Integer.parseInt(line.split(":")[1].trim());
+                    }
+                }
+                String bodyStr = IOUtils.readData(br, contentLength);
+                log.debug("Request Body : {}", bodyStr);
+
+                Map<String, String> params = HttpRequestUtils.parseQueryString(bodyStr);
+
+                User user = new User(params.get("userId"), params.get("password"), params.get("name"), params.get("email"));
+            }
 
 
-			while (!"".equals(line) && line != null) {
-				log.debug("header : {}", line);
 
-				String[] tokens = line.split(" ");
+            while ((line = br.readLine()) != null && !"".equals(line)) {
+                log.debug("header : {}", line);
+            }
 
-				if (tokens.length > 2 && "/index.html".equals(tokens[1])) {
-					body = Files.readAllBytes(new File("webapp" + tokens[1]).toPath());
-				}
+            response200Header(dos, body.length);
+            responseBody(dos, body);
+        } catch (IOException e) {
+            log.error(e.getMessage(), e);
+        }
+    }
 
-				if (tokens.length > 2 && tokens[1].contains("create")) {
+    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
+        try {
+            dos.writeBytes("HTTP/1.1 200 OK \r\n");
+            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage(), e);
+        }
+    }
 
-					int index = tokens[1].indexOf("?");
-
-					String requestPath = tokens[1].substring(0, index);
-					String params = tokens[1].substring(index + 1);
-
-					Map<String, String> stringStringMap = HttpRequestUtils.parseQueryString(params);
-
-					String email = stringStringMap.get("email");
-					String name = stringStringMap.get("name");
-					String userId = stringStringMap.get("userId");
-					String password = stringStringMap.get("password");
-
-					log.debug("email : {}, name : {}, userId : {}, password : {}", email, name, userId, password);
-
-					User user = new User(userId, password, name, email);
-
-					log.debug("user : {}", user);
-				}
-
-
-				line = br.readLine();
-
-				if (line == null) {
-					return;
-				}
-			}
-
-			response200Header(dos, body.length);
-			responseBody(dos, body);
-		} catch (IOException e) {
-			log.error(e.getMessage());
-		}
-	}
-
-	private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
-		try {
-			dos.writeBytes("HTTP/1.1 200 OK \r\n");
-			dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
-			dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
-			dos.writeBytes("\r\n");
-		} catch (IOException e) {
-			log.error(e.getMessage());
-		}
-	}
-	
-	private void responseBody(DataOutputStream dos, byte[] body) {
-		try {
-			dos.write(body, 0, body.length);
-			dos.writeBytes("\r\n");
-			dos.flush();
-		} catch (IOException e) {
-			log.error(e.getMessage());
-		}
-	}
+    private void responseBody(DataOutputStream dos, byte[] body) {
+        try {
+            dos.write(body, 0, body.length);
+            dos.writeBytes("\r\n");
+            dos.flush();
+        } catch (IOException e) {
+            log.error(e.getMessage(), e);
+        }
+    }
 }
